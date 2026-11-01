@@ -9,6 +9,7 @@ import type { Pair } from "./types";
 
 export function App() {
   const [pairs, setPairs] = useState<Pair[]>(() => teachingPairs());
+  const [pendingIds, setPendingIds] = useState<string[]>([]);
   const [poolName, setPoolName] = useState("Teaching example");
   const [activeHospital, setActiveHospital] = useState(HOSPITALS[0].id);
   const [inspectedId, setInspectedId] = useState("m1");
@@ -19,7 +20,8 @@ export function App() {
   const [showEdges, setShowEdges] = useState(true);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const graph = useMemo(() => buildGraph(pairs), [pairs]);
+  const activePairs = useMemo(() => pairs.filter((pair) => !pendingIds.includes(pair.id)), [pairs, pendingIds]);
+  const graph = useMemo(() => buildGraph(activePairs), [activePairs]);
   const result = useMemo(() => solve(graph, forbidden), [graph, forbidden]);
   const hospital = HOSPITALS.find((item) => item.id === activeHospital) ?? HOSPITALS[0];
   const report = result.reports.find((item) => item.hospitalId === hospital.id) ?? result.reports[0];
@@ -101,6 +103,7 @@ export function App() {
             onClick={() => {
               const next = teachingPairs();
               setPairs(next);
+              setPendingIds([]);
               setPoolName("Teaching example");
               setActiveHospital("mercy");
               setInspectedId("m1");
@@ -118,6 +121,7 @@ export function App() {
               const seed = 1000 + Math.floor(Math.random() * 9000);
               const next = shuffledPairs(seed);
               setPairs(next);
+              setPendingIds([]);
               setPoolName(`Shuffled pool ${seed}`);
               setActiveHospital(next[0]?.hospitalId ?? "mercy");
               setInspectedId(next[0]?.id ?? "");
@@ -160,11 +164,12 @@ export function App() {
           onCreating={setCreating}
           onAdd={(pair) => {
             setPairs((current) => [...current, pair]);
+            setPendingIds((current) => [...current, pair.id]);
             setApprovals({});
             setFocusCycle(null);
             setInspectedId(pair.id);
             setCreating(false);
-            setNotice("Pair added to the live pool. The plan was recomputed. Earlier approvals were cleared; surgeon rejections still stand.");
+            setNotice("Pair saved to the records. Surgeon permission is required before it enters the matching algorithm.");
           }}
         />
         <PayoffPanel
@@ -172,6 +177,7 @@ export function App() {
           pairs={pairs}
           report={report}
           cycles={result.cycles}
+          pendingIds={pendingIds}
           internalCycles={result.internalCycles[hospital.id] ?? []}
           approvals={approvals}
           planLocked={planLocked}
@@ -185,6 +191,12 @@ export function App() {
               if (existing.includes(activeHospital)) return current;
               return { ...current, [key]: [...existing, activeHospital] };
             });
+          }}
+          onApprovePatient={(pairId) => {
+            setPendingIds((current) => current.filter((id) => id !== pairId));
+            setApprovals({});
+            setFocusCycle(null);
+            setNotice("Patient approved by the surgeon. The matching algorithm was updated; any previous cycle approvals were cleared.");
           }}
           onReject={(key) => {
             setForbidden((current) => (current.includes(key) ? current : [...current, key]));

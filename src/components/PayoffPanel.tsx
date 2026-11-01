@@ -6,6 +6,7 @@ export function PayoffPanel({
   pairs,
   report,
   cycles,
+  pendingIds,
   internalCycles,
   approvals,
   planLocked,
@@ -14,12 +15,14 @@ export function PayoffPanel({
   nameOf,
   onFocus,
   onApprove,
+  onApprovePatient,
   onReject,
 }: {
   hospital: Hospital;
   pairs: Pair[];
   report: HospitalReport;
   cycles: Cycle[];
+  pendingIds: string[];
   internalCycles: Cycle[];
   approvals: Record<string, string[]>;
   planLocked: boolean;
@@ -28,9 +31,11 @@ export function PayoffPanel({
   nameOf: (pairId: string, who: "recipient" | "donor") => string;
   onFocus: (key: string | null) => void;
   onApprove: (key: string) => void;
+  onApprovePatient: (pairId: string) => void;
   onReject: (key: string) => void;
 }) {
   const ownPairs = pairs.filter((pair) => pair.hospitalId === hospital.id);
+  const pending = new Set(pendingIds);
   const delta = report.exchangeCount - report.internalCount;
   const mine = cycles.filter((cycle) => cycle.hospitalIds.includes(hospital.id));
   const others = cycles.filter((cycle) => !cycle.hospitalIds.includes(hospital.id));
@@ -65,6 +70,22 @@ export function PayoffPanel({
 
         <ul className="patient-list">
           {ownPairs.map((pair) => {
+            if (pending.has(pair.id)) {
+              return (
+                <li key={pair.id} className="patient-row pending-patient">
+                  <div className="patient-top">
+                    <strong>{pair.recipient.name}</strong>
+                    <span className="pill warn">Permission needed</span>
+                  </div>
+                  <p>Saved in the patient records, but not visible to the matching algorithm yet.</p>
+                  <div className="form-actions">
+                    <button type="button" className="btn primary" onClick={() => onApprovePatient(pair.id)}>
+                      Approve for matching
+                    </button>
+                  </div>
+                </li>
+              );
+            }
             const view = describePair(pair, pairs, cycles, internalCycles, nameOf);
             return (
               <li key={pair.id} className={`patient-row ${view.tone}`}>

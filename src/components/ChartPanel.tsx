@@ -287,7 +287,7 @@ function PairForm({
       <div className="epic-bar">
         <div>
           <h3>New donor–recipient pair</h3>
-          <p>{hospital.name} · goes into the live pool on save</p>
+          <p>{hospital.name} · saved to records, then released to matching by the surgeon</p>
         </div>
       </div>
       <div className={`banner ${aboOk ? "warn" : "bad"}`}>
